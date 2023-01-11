@@ -1,4 +1,4 @@
-# RoamesGeometry
+# RoamesGeometry - copy of Greg's master as of 2023-01-11
 
 *Primitive geometric objects for Roames modelling.*
 
