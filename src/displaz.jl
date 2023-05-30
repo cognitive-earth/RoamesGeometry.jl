@@ -25,7 +25,19 @@ end
             vertices[2*i-1] = ls[i][0.0]
             vertices[2*i] = ls[i][end]
         end
-        Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 2, kwargs...)
+        # Allow colors to be assigned to vectors of quadratics
+        if haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{N,2} where N <: Number
+            colour = repeat(kwargs[:color],inner=[1, 2])
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 2, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{String}
+            colour = cat(([repeat(Displaz._color_names[c[1]],outer=[1,2]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 2, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{Char}
+            colour = cat(([repeat(Displaz._color_names[c],outer=[1,2]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 2, kwargs..., color=colour)    
+        else
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 2, kwargs...)
+        end
     end
 
     function Displaz.plot3d!(l::Line, args...; label = "Line", kwargs...)
@@ -107,7 +119,19 @@ end
         for i = 1:length(qs)
             vertices[(1+20*(i-1)):(20*i)] = qs[i][linspace(zero(length(qs[i])), length(qs[i]), 20)]
         end
-        Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
+        # Allow colors to be assigned to vectors of quadratics
+        if haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{N,2} where N <: Number
+            colour = repeat(kwargs[:color],inner=[1, 20])
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{String}
+            colour = cat(([repeat(Displaz._color_names[c[1]],outer=[1,20]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{Char}
+            colour = cat(([repeat(Displaz._color_names[c],outer=[1,20]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)    
+        else
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
+        end
     end
 
     function Displaz.plot3d!(q::Quadratic, args...; label = "Quadratic", kwargs...)
@@ -134,12 +158,25 @@ end
         for i = 1:length(cs)
             vertices[(1+20*(i-1)):(20*i)] = cs[i][linspace(cs[i].lmin, cs[i].lmax, 20)]
         end
-        Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
+
+        # Allow colors to be assigned to vectors of catenaries
+        if haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{N,2} where N <: Number
+            colour = repeat(kwargs[:color],inner=[1, 20])
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{String}
+            colour = cat(([repeat(Displaz._color_names[c[1]],outer=[1,20]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)
+        elseif haskey(kwargs, :color) && typeof(kwargs[:color]) <: Array{Char}
+            colour = cat(([repeat(Displaz._color_names[c],outer=[1,20]) for c in kwargs[:color]])..., dims=2)
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs..., color=colour)    
+        else
+            Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
+        end
     end
 
     function Displaz.plot3d!(c::Catenary, args...; label = "Catenary", kwargs...)
         vertices = c[linspace(c.lmin, c.lmax, 20)]
-        Displaz.plot3d!(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
+        Displaz.plot3d(vertices, args...; label = label, markershape = '-', linebreak = 20, kwargs...)
     end
 
     function Displaz.plot3d!(cs::AbstractVector{<:Catenary}, args...; label = "Catenaries [$(length(cs))]", kwargs...)
