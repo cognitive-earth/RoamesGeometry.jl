@@ -260,3 +260,51 @@ function Base.filter(pred::Base.Fix2{typeof(in), <:AbstractRegion}, points::Acce
 
     return out
 end
+
+"""
+findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d)
+
+    Returns all point cloud indices inside selected grid cells, where the selected grid cells are thoes whose centre 
+    are within a distance d of any of the given lines (note a 2D distance in the first 2 dimensions (ie x,y) is used).
+"""
+function findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64)
+    grid = points.index
+    lines = [convert2d(line) for line in lines]
+
+    # Map grid cells with cell's center point
+    cell_center_points = Dict()
+    half_spacing = grid.spacing / 2.
+    for i in 1:grid.n_x
+        for j in 1:grid.n_y
+            cell_center_point = SVector(grid.x0 + grid.spacing * (i - 1) + half_spacing, grid.y0 + grid.spacing * (j - 1) + half_spacing)
+            cell_center_points[i, j] = cell_center_point
+        end
+    end
+
+    # Find cells of center point that are in the distance d to the lines
+    cell_center_point_indexs = Dict()
+    for line in lines
+        for i in 1:grid.n_x
+            for j in 1:grid.n_y
+                if !haskey(cell_center_point_indexs, (i, j))
+                    cell_center_point = cell_center_points[i, j]
+                    dist = distance(line, cell_center_point)
+                    if dist <= d
+                        cell_center_point_indexs[i, j] = nothing
+                    end
+                end
+            end
+        end
+    end
+
+    # Return indices of original point cloud of the selected cells
+    inbound_points_indices = reduce(vcat, [grid.index[grid[i, j]] for (i, j) in keys(cell_center_point_indexs)])
+
+    return inbound_points_indices
+end
+
+findIndiciesClose2Lines(points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, lines::AbstractVector{<:Line}, d::Float64) = findIndiciesClose2Lines(lines, points, d)
+findIndiciesClose2Lines(points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64, lines::AbstractVector{<:Line}) = findIndiciesClose2Lines(lines, points, d)
+findIndiciesClose2Lines(lines::AbstractVector{<:Line}, d::Float64, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}) = findIndiciesClose2Lines(lines, points, d)
+findIndiciesClose2Lines(d::Float64, lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}) = findIndiciesClose2Lines(lines, points, d)
+findIndiciesClose2Lines(d::Float64, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, lines::AbstractVector{<:Line}) = findIndiciesClose2Lines(lines, points, d)
