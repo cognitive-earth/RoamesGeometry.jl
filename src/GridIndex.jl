@@ -298,7 +298,7 @@ function findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::Accelera
     end
 
     # Return indices of original point cloud of the selected cells
-    inbound_points_indices = reduce(vcat, [grid.index[grid[i, j]] for (i, j) in keys(cell_center_point_indexs)])
+    inbound_points_indices = reduce(vcat, [grid.index[grid[i, j]] for (i, j) in keys(cell_center_point_indexs)]; init = Int64[])
 
     return inbound_points_indices
 end
