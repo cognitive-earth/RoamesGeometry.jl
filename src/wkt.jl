@@ -802,6 +802,7 @@ function parse_wkt(::Type{Polygon{2, Float64}}, tokens::AbstractVector{<:Abstrac
     if tokens[i] != "("
         throw(WKTParsingError("Error parsing POLYGON"))
     end
+    exterior = LineString{2, Float64, Vector{SVector{2, Float64}}}
     interiors = Vector{LineString{2, Float64, Vector{SVector{2, Float64}}}}()
     n_linestrings = 0
     i += 1
@@ -836,6 +837,7 @@ function parse_wkt(::Type{Polygon{3, Float64}}, tokens::AbstractVector{<:Abstrac
     if tokens[i] != "("
         throw(WKTParsingError("Error parsing POLYGON Z"))
     end
+    exterior = LineString{3, Float64, Vector{SVector{3, Float64}}}
     interiors = Vector{LineString{3, Float64, Vector{SVector{3, Float64}}}}()
     n_linestrings = 0
     i += 1
