@@ -50,7 +50,7 @@ end
         edges::polygon::Union{Table,Polygon},
         poly_file::String;
         poly_name::String = "Test",
-        color::String = POLY_COLORS[1],
+        color::String = "ffffff",
     )::Nothing
 Exports polygon to a `kml` file.
 * `edges`: Polygon object or table or edges (positions of the polygon points)
