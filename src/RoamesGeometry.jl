@@ -26,9 +26,12 @@ export AbstractRegion, BoundingBox, TriangularPrism, Sphere, Triangle, Circle, C
 
 export boundingbox, pad, intersects, wireframe, distance, powerline_distances, volume,
        area, might_intersect, isclosed, issimple, closest_point, closest_points, convert2d,
-       convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines
+       convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines,
+       is_clockwise
 
 export wkt, load_wkt, save_wkt, read_wkt, write_wkt
+
+export read_kml, write_kml
 
 # Any affine transformation type
 const AffineTransformation = Union{IdentityTransformation, Translation, LinearMap, AffineMap}
@@ -66,6 +69,7 @@ include("might_intersect.jl") # included last as uses unions of geometries
 include("distances.jl") # calculates the distances between e.g. points and catenaries
 include("wkt.jl") # read and write WKT files
 include("displaz.jl") # optionally loads methods if the Displaz package is installed
+include("kml.jl") # kml functionality
 
 if VERSION >= v"0.7.0"
     using AcceleratedArrays
