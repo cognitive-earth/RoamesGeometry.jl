@@ -171,3 +171,26 @@ function intersects(p1::Polygon{2}, p2::Polygon{2})
     # Or else they do not intersect
     return false
 end
+
+"""
+Checks if polygon points are clockwise
+
+    https://www.element84.com/blog/determining-the-winding-of-a-polygon-given-as-a-set-of-ordered-points
+"""
+function is_clockwise(polygon_edges::Vector)::Bool
+    x = map(p -> p.lat, polygon_edges[1:end-1])
+    y = map(p -> p.lon, polygon_edges[1:end-1])
+    x_dif = circshift(x, -1) .- x
+    y_sum = circshift(y, -1) .+ y
+    return sum(x_dif .* y_sum) > 0
+end
+
+function is_clockwise(polygon::Union{Table,Polygon})::Bool
+    edges = if polygon isa Table 
+        polygon.position
+    else
+        polygon.exterior.points
+    end
+    edges = map(e -> (lat=e[1], lon=e[2]), edges)
+    return is_clockwise(edges)
+end
