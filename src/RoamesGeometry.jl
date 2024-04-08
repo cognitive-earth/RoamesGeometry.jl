@@ -26,10 +26,9 @@ export AbstractRegion, BoundingBox, TriangularPrism, Sphere, Triangle, Circle, C
 
 export boundingbox, pad, intersects, wireframe, distance, powerline_distances, volume,
        area, might_intersect, isclosed, issimple, closest_point, closest_points, convert2d,
-       convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines,
-       is_clockwise
-
-export wkt, load_wkt, save_wkt, read_wkt, write_wkt
+       convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines
+       
+export wkt, load_wkt, save_wkt, read_wkt, write_wkt, is_clockwise
 
 export read_kml, write_kml
 
@@ -69,7 +68,6 @@ include("might_intersect.jl") # included last as uses unions of geometries
 include("distances.jl") # calculates the distances between e.g. points and catenaries
 include("wkt.jl") # read and write WKT files
 include("displaz.jl") # optionally loads methods if the Displaz package is installed
-include("kml.jl") # kml functionality
 
 if VERSION >= v"0.7.0"
     using AcceleratedArrays
@@ -86,6 +84,7 @@ if VERSION >= v"0.7.0"
 
     include("GridIndex.jl")
     include("pointcloud_io.jl")
+    include("kml.jl") # kml functionality
 end
 
 end # module
