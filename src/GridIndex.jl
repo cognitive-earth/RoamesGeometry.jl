@@ -209,7 +209,7 @@ end
 
 """
 function containsMoreThanN(pred::Base.Fix2{typeof(in), <:AbstractRegion}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, N::Int64)
-    Returns true if N or more points are returned as true by the predicate pred.
+    Returns true if more than N points are returned as true by the predicate pred.
 """
 function containsMoreThanN(pred::Base.Fix2{typeof(in), <:AbstractRegion}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, N::Int64)
     # First find the relevant grid cells
