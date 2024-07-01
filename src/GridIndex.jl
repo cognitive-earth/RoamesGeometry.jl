@@ -308,3 +308,114 @@ findIndiciesClose2Lines(points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridInde
 findIndiciesClose2Lines(lines::AbstractVector{<:Line}, d::Float64, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}) = findIndiciesClose2Lines(lines, points, d)
 findIndiciesClose2Lines(d::Float64, lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}) = findIndiciesClose2Lines(lines, points, d)
 findIndiciesClose2Lines(d::Float64, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, lines::AbstractVector{<:Line}) = findIndiciesClose2Lines(lines, points, d)
+
+"""
+Find the closest point to pos amongst all the points inside grid cell gx,gy of points. zMin and zMax provide vertical bounds within which to limit the search, best is the currenlty closest point from any potential earlier search.
+minDist² is the square of the minimium distance away considerd "close enough", while maxDist² is the currenlty found closest point's distance (from previous search eg. of another cell). excLudeStart and excludeEnd allow one to only consider 
+a rangge of points inside the points vector.  
+"""
+function closestPointInCell(pos::SVector{3,Float64}, grid::GridIndex, gx::Int64, gy::Int64, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, zMin::Float64, zMax::Float64, minDist²::Float64, maxDist²::Float64, best::Int64, excludeStart::Int64, excludeEnd::Int64)
+    for i ∈ grid[gx, gy]
+        j = grid.index[i]
+        if excludeStart <= j <= excludeEnd
+            continue
+        end
+        p = points[j]
+        if p[3] < zMin
+            continue
+        end
+        if p[3] > zMax
+            break
+        end
+        diff = pos .- p
+        dist² = dot(diff, diff)
+        if dist² < minDist²
+            return true, j, dist²
+        end
+        if dist² < maxDist²
+            maxDist² = dist²
+            best = j
+        end
+    end
+    return false, best, maxDist²
+end
+
+"""
+    findClosestPointIndex(pos::SVector{3,Float64}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, minDist::Float64, maxDist::Float64, excludeStart::Int64, excludeEnd::Int64)
+  
+    Looks for the closest point to pos inside the indexed array "points" stops once it finds a point within  "minDist" and will not look further than "maxDist". 
+     Points between indicies excludeStart and excludeEnd are not included as part of the search.
+    Returns the point index and the distance to it, will return 0 as index if nothing found. Note this code has been optimised for a particular type of point cloud
+    (typical Reigl VQ 1560ii aerial capture over a combination of farmland and forest, indexed at 1m resolution) other optimisation methods could be better for point clouds of different 
+    densities or index resolutions. The position pos is not assumed to exist inside points. 
+"""
+function findClosestPointIndex(pos::SVector{3,Float64}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, minDist::Float64, maxDist::Float64, excludeStart::Int64, excludeEnd::Int64)
+    grid = points.index
+    bbox = pad(boundingbox(pos), maxDist)
+    bounds = [bbox.xmax, bbox.xmin, bbox.ymax, bbox.ymin, bbox.zmax, bbox.zmin]
+    maxDist² = maxDist * maxDist
+    best = 0
+    minDist² = minDist * minDist
+
+    # First look inside the index cell to which pos lies
+    firstCellX = Int(cld(pos[1] - grid.x0, grid.spacing))
+    firstCellY = Int(cld(pos[2] - grid.y0, grid.spacing))
+    found, best, maxDist² =closestPointInCell(pos, grid, firstCellX, firstCellY, points, bounds[6], bounds[5], minDist², maxDist², best, excludeStart, excludeEnd)
+    if found
+        return best, sqrt(maxDist²)
+    end
+
+    # Find distances to edges of first cell, if all further away than best match found so far return
+    dist2WEdge = (pos[1] - grid.x0)% grid.spacing
+    dist2EEdge = grid.spacing - dist2WEdge
+    dist2SEdge = (pos[2] - grid.y0)% grid.spacing
+    dist2NEdge = grid.spacing - dist2SEdge
+    dist2Edges = [dist2NEdge, dist2EEdge, dist2SEdge, dist2WEdge]
+    closest = argmin(dist2Edges)
+    distToEdge = dist2Edges[closest]
+    if maxDist² < distToEdge * distToEdge
+        return best, sqrt(maxDist²)
+    end
+
+    # check second closest cell to pos
+    secondCellX = firstCellX
+    secondCellY = firstCellY
+    if closest == 1
+        secondCellY += 1
+    elseif closest == 2
+        secondCellX += 1
+    elseif closest == 3
+        secondCellY += -1
+    else
+        secondCellX += -1
+    end
+    (gx_min, gx_max, gy_min, gy_max) = RoamesGeometry.cells_bbox(grid, bbox)
+    if (gx_min < secondCellX < gx_max) && (gy_min < secondCellY < gy_max) 
+        found, best, maxDist² = closestPointInCell(pos, grid, secondCellX, secondCellY, points, bounds[6], bounds[5], minDist², maxDist², best, excludeStart, excludeEnd)
+        if found
+            return best, sqrt(maxDist²)
+        end
+        dist2Edges[closest] = Inf
+        closest = argmin(dist2Edges)
+        distToEdge = dist2Edges[closest]
+        if maxDist² < distToEdge * distToEdge
+            return best, sqrt(maxDist²)
+        end
+    end
+
+    # Loop through all remaining cells
+    @inbounds for gy ∈ gy_min:gy_max
+        for gx ∈ gx_min:gx_max
+
+            if gx == firstCellX && gy == firstCellY || gx == secondCellX && gy == secondCellY 
+                continue
+            end
+            
+            found, best, maxDist² = closestPointInCell(pos, grid, gx, gy, points, bounds[6], bounds[5], minDist², maxDist², best, excludeStart, excludeEnd)
+            if found
+                return best, sqrt(maxDist²)
+            end
+        end
+    end
+    return best, sqrt(maxDist²)
+end
