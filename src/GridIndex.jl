@@ -358,8 +358,8 @@ function findClosestPointIndex(pos::SVector{3,Float64}, points::AcceleratedArray
     minDist² = minDist * minDist
 
     # First look inside the index cell to which pos lies
-    firstCellX = min(Int(cld(pos[1] - grid.x0, grid.spacing)), grid.n_x)
-    firstCellY = min(Int(cld(pos[2] - grid.y0, grid.spacing)), grid.n_y)
+    firstCellX = max(min(Int(cld(pos[1] - grid.x0, grid.spacing)), grid.n_x), 1)
+    firstCellY = max(min(Int(cld(pos[2] - grid.y0, grid.spacing)), grid.n_y), 1)
     found, best, maxDist² =closestPointInCell(pos, grid, firstCellX, firstCellY, points, bounds[6], bounds[5], minDist², maxDist², best, excludeStart, excludeEnd)
     if found
         return best, sqrt(maxDist²)
