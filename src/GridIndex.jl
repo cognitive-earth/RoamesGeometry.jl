@@ -267,7 +267,7 @@ findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{
     Returns all point cloud indices inside selected grid cells, where the selected grid cells are thoes whose centre 
     are within a distance d of any of the given lines (note a 2D distance in the first 2 dimensions (ie x,y) is used).
 """
-function findIndiciesClose2LinesNew(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64)
+function findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64)
     grid = points.index
     lines = [convert2d(line) for line in lines]
 
