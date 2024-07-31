@@ -267,33 +267,26 @@ findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{
     Returns all point cloud indices inside selected grid cells, where the selected grid cells are thoes whose centre 
     are within a distance d of any of the given lines (note a 2D distance in the first 2 dimensions (ie x,y) is used).
 """
-function findIndiciesClose2Lines(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64)
+function findIndiciesClose2LinesNew(lines::AbstractVector{<:Line}, points::AcceleratedArray{<:Any, <:Any, <:Any, <:GridIndex}, d::Float64)
     grid = points.index
     lines = [convert2d(line) for line in lines]
 
-    # Map grid cells with cell's center point
-    cell_center_points = Dict()
+    # Find grid cells with their centre point close to a line
     half_spacing = grid.spacing / 2.
-    for i in 1:grid.n_x
-        for j in 1:grid.n_y
-            cell_center_point = SVector(grid.x0 + grid.spacing * (i - 1) + half_spacing, grid.y0 + grid.spacing * (j - 1) + half_spacing)
-            cell_center_points[i, j] = cell_center_point
-        end
-    end
-
-    # Find cells of center point that are in the distance d to the lines
+    k = 1
+    dx = grid.x0 + half_spacing
+    dy = grid.y0 + half_spacing
+    len = grid.n_y * grid.n_x
     cell_center_point_indexs = Dict()
-    for line in lines
+    for j in 1:grid.n_y
         for i in 1:grid.n_x
-            for j in 1:grid.n_y
-                if !haskey(cell_center_point_indexs, (i, j))
-                    cell_center_point = cell_center_points[i, j]
-                    dist = distance(line, cell_center_point)
-                    if dist <= d
-                        cell_center_point_indexs[i, j] = nothing
-                    end
+            if k == len || grid.start_indices[k] != grid.start_indices[k+1] # ignore empty cells
+                cell_center_point = SVector(dx + grid.spacing * (i - 1), dy + grid.spacing * (j - 1))
+                if any(l->distance(l, cell_center_point) <= d, lines)
+                    cell_center_point_indexs[i, j] = nothing
                 end
             end
+            k += 1
         end
     end
 
