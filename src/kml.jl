@@ -6,8 +6,7 @@ function read_kml(kml_file::String;
         first_outer_ring_only = true)
 
 By default will return only the first outer ring found in the file as a Polygon type. If first_outer_ring_only = false Reads in a vector of RoamesGeometry Polygon type,
- works for single polygons, multi polygons and polygons with holes
-note in the case of holes the direction of the hole needs to be the opposite of the exterior otherwise points in the hole will be included, all inner
+ It works for single polygons, multi polygons and polygons with holes note in the case of holes the direction of the hole needs to be the opposite of the exterior otherwise points in the hole will be included, all inner
 and outer LineStrings need to be closed and simple. If  first_outer_ring_only = true and return_table is true a Table type is returned instead of a Polygon.
 By default the polygon points will be lat followed by lon, ie the opposite of the kml file, setting swap_axes=true will makeit lon, lat 
 """
@@ -72,40 +71,52 @@ function read_kml(kml_file::String;
     return poly
 end
 
-"""
-    function write_kml(
-        edges::polygon::Union{Table,Polygon},
-        poly_file::String;
-        poly_name::String = "Test",
-        color::String = "ffffff",
-    )::Nothing
-Exports polygon to a `kml` file.
-* `edges`: Polygon object or table or edges (positions of the polygon points)
-* `poly_file`: Polygon file name
-* `poly_name`: Polygon name that goes into the kml file.
-* `color`: Color of the polygon
-
-At the moment it only writes single polygon and it does not work with polygons with holes.
-"""
 function write_kml(
     polygon::Union{Table,Polygon},
     poly_file::String;
     poly_name::String = "Test",
     color::String = "ffffff",
 )::Nothing
-    edges, has_alt = if polygon isa Table 
-        polygon.position, length(polygon.position[1]) == 3
+    if polygon isa Table
+        poly = polygon.position
+        write_kml(
+            [Polygon(poly)],
+            poly_file;
+            poly_name,
+            color,
+        )
     else
-        polygon.exterior.points, length(polygon.exterior.points[1]) == 3
+        write_kml(
+            [polygon],
+            poly_file;
+            poly_name,
+            color,
+        )
     end
-    edges = if has_alt
-        map(e -> (lat=e[1], lon=e[2], alt=e[3]), edges)
-    else
-        map(e -> (lat=e[1], lon=e[2]), edges)
-    end
-    if is_clockwise(edges)
-        edges = reverse(edges)
-    end
+    return nothing
+end
+
+"""
+    function write_kml(
+        polygon::Vector{P} where P <:Polygon,
+        poly_file::String;
+        poly_name::String = "Test",
+        color::String = "ffffff",
+    )::Nothing
+Exports polygon to a `kml` file.
+* `polygon`: Is a vector of RoamesGeometry.Polygon type, the vector being how we deal with multipolygons, each polygon may contain holes and be 2D or 3D
+* `poly_file`: Polygon file name
+* `poly_name`: Polygon name that goes into the kml file.
+* `color`: Color of the polygon
+"""
+function write_kml(
+    polygon::Vector{P} where P<:Polygon,
+    poly_file::String;
+    poly_name::String = "Test",
+    color::String = "ffffff",
+)::Nothing
+    has_alt = polygon[1].exterior.points[1] == 3
+    values = has_alt ? [2,1,3] : [2,1]
     open(poly_file, "w") do f
         println(
             f,
@@ -144,27 +155,36 @@ function write_kml(
         </Style>
         <Placemark>
                 <name>$(poly_name)</name>
-                <styleUrl>#msn_ylw-pushpin</styleUrl>
-                <Polygon>
-                        <outerBoundaryIs>
-                                <LinearRing>
-                                        <coordinates>""",
+                <styleUrl>#msn_ylw-pushpin</styleUrl>"""
         )
-        foreach(edges) do edge_point
-            has_alt ? print(f, "$(edge_point.lon),$(edge_point.lat),$(edge_point.alt) ") : print(f, "$(edge_point.lon),$(edge_point.lat) ")
+        println(f,"<MultiGeometry>")
+        for poly in polygon
+            println(f,"<Polygon>")
+            if !isempty(poly.exterior)
+                println(f, "<outerBoundaryIs><LinearRing><coordinates>")
+                points = poly.exterior.points
+                if is_clockwise(map(e -> (lat=e[1], lon=e[2]), points))
+                    points = reverse(points)
+                end
+                text = join(map(p->join(p[values],','), points)," ")
+                println(f, text)
+                println(f, "</coordinates></LinearRing></outerBoundaryIs>")
+            end
+            if !isempty(poly.interiors)
+                for inner in poly.interiors
+                    println(f, "<innerBoundaryIs><LinearRing><coordinates>")
+                    points = inner.points
+                    if !is_clockwise(map(e -> (lat=e[1], lon=e[2]), points))
+                        points = reverse(points)
+                    end
+                    text = join(map(p->join(p[values],','), points)," ")
+                    println(f, text)
+                    println(f, "</coordinates></LinearRing></innerBoundaryIs>")
+                end
+            end
+            println(f,"</Polygon>")
         end
-        println(
-            f,
-            """
-
-                                        </coordinates>
-                                </LinearRing>
-                        </outerBoundaryIs>
-                </Polygon>
-        </Placemark>
-</Document>
-</kml>""",
-        )
+        println(f,"</MultiGeometry></Placemark></Document></kml>")
     end
     return nothing
 end
