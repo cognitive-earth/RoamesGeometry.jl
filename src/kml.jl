@@ -1,48 +1,75 @@
+
 """
-    function read_kml(
-        kml_file::String;
+function read_kml(kml_file::String;
         return_table::Bool = false,
         swap_axes::Bool = false,
-    )::Table
-Reads in a polygon from a KML as a RoamesGeometry Polygon or a Table, currently just finds the first Polygon in the file and reads it.
-Also it cannot read polygons with holes at the moment.
+        first_outer_ring_only = true)
+
+By default will return only the first outer ring found in the file as a Polygon type. If first_outer_ring_only = false Reads in a vector of RoamesGeometry Polygon type,
+ works for single polygons, multi polygons and polygons with holes
+note in the case of holes the direction of the hole needs to be the opposite of the exterior otherwise points in the hole will be included, all inner
+and outer LineStrings need to be closed and simple. If  first_outer_ring_only = true and return_table is true a Table type is returned instead of a Polygon.
+By default the polygon points will be lat followed by lon, ie the opposite of the kml file, setting swap_axes=true will makeit lon, lat 
 """
-function read_kml(
-    kml_file::String;
+function read_kml(kml_file::String;
     return_table::Bool = false,
     swap_axes::Bool = false,
-)::Union{Table,Polygon}
+    first_outer_ring_only = true)::Union{Table,Polygon,Vector{P} where P<:Polygon}
+    poly = Polygon[]
     s = read(kml_file, String)
-    tag = r"<Polygon>"
-    m1 = match(tag, s, 1)
-    tag = r"<coordinates>"
-    m1 = match(tag, s, m1.offset)
-    start = m1.offset + length(tag.pattern)
-    tag = r"</coordinates>"
-    m1 = match(tag, s, m1.offset)
-    finish = m1.offset - 1
-    temp = split(s[start:finish])
-
-    axis_1 = 2
-    axis_2 = 1
-    if swap_axes
-        axis_1 = 1
-        axis_2 = 2
-    end
-    position = map(temp) do t
-        temp2 = split(t, ",")
-        if length(temp2) == 2
-            SVector(parse(Float64, temp2[axis_1]), parse(Float64, temp2[axis_2]))
-        elseif length(temp2) == 3
-            SVector(
-                parse(Float64, temp2[axis_1]),
-                parse(Float64, temp2[axis_2]),
-                parse(Float64, temp2[3]),
-            )
+    samples = swap_axes ? [1, 2, 3] : [2, 1, 3]
+    loc = 1
+    while true
+        tag = r"<Polygon>"
+        m1 = match(tag, s, loc)
+        if isnothing(m1)
+            break
         end
+        outer = SArray{Tuple{2},Float64,1,2}[]
+        inners = Vector{SVector{2, Float64}}[]
+        while true
+            tag2 = r"<outerBoundaryIs>"
+            m2 = match(tag2, s, m1.offset)
+            tag3 = r"<innerBoundaryIs>"
+            m3 = match(tag3, s, m1.offset)
+            tag4 = r"</Polygon>"
+            m4 = match(tag4, s, m1.offset)
+            if (isnothing(m2) || m4.offset < m2.offset) && (isnothing(m3) || m4.offset < m3.offset)
+                break
+            end
+            isInner = false
+            if isnothing(m3) || !isnothing(m2) && m3.offset > m2.offset
+                m1 = m2
+            else
+                m1 = m3
+                isInner = true
+            end
+            tag = r"<coordinates>"
+            m1 = match(tag, s, m1.offset)
+            start = m1.offset + length(tag.pattern)
+            tag = r"</coordinates>"
+            m1 = match(tag, s, m1.offset)
+            loc = m1.offset
+            finish = m1.offset - 1
+            temp = split(s[start:finish])
+            is3D = length(split(temp[1],',')) > 2
+            sampler = is3D ? samples : samples[1:2] 
+            if isInner
+                push!(inners, map(ss->SVector(parse.(Float64,split(ss,',')[sampler])...), temp))
+            else
+                outer = map(ss->SVector(parse.(Float64,split(ss,',')[sampler])...), temp)
+            end
+        end
+        if first_outer_ring_only
+            if return_table
+                return Table(position = outer)
+            else
+                return Polygon(LineString(outer))
+            end
+        end
+        push!(poly, Polygon(LineString(outer), LineString.(inners)))
     end
-    position = filter(!isnothing, position)
-    return return_table ? Table(position = position) : Polygon(position)
+    return poly
 end
 
 """
