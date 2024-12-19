@@ -175,3 +175,11 @@ function intersects(p1::Polygon{2}, p2::Polygon{2})
     # Or else they do not intersect
     return false
 end
+
+function issimple(polygon::Polygon)
+    return issimple(polygon.exterior) && all(p->issimple(p), polygon.interiors)
+end
+
+function issimple(multiPolygon::Vector{P} where P <: Polygon)
+    return all(p->issimple(p), multiPolygon)
+end
