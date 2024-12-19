@@ -176,6 +176,11 @@ function intersects(p1::Polygon{2}, p2::Polygon{2})
     return false
 end
 
+function intersects(p1::Polygon{2}, p2::Vector{Polygon})
+    return any(pp-> intersects(pp, p1) ,p2)
+end
+intersects(p2::Vector{Polygon}, p1::Polygon{2}) = intersects(p1, p2)
+
 function issimple(polygon::Polygon)
     return issimple(polygon.exterior) && all(p->issimple(p), polygon.interiors)
 end
