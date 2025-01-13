@@ -7,7 +7,7 @@ function read_kml(kml_file::String;
 
 By default will return only the first outer ring found in the file as a Polygon type. If first_outer_ring_only = false Reads in a vector of RoamesGeometry Polygon type,
  It works for single polygons, multi polygons and polygons with holes note in the case of holes the direction of the hole needs to be the opposite of the exterior otherwise points in the hole will be included, all inner
-and outer LineStrings need to be closed and simple. If  first_outer_ring_only = true and return_table is true a Table type is returned instead of a Polygon.
+and outer LineStrings need to be closed and simple. If  first_outer_ring_only = true and return_table is true a Table type is returned instead of a Polygon (note you cannot read as a table if first_outer_ring_only is false).
 By default the polygon points will be lat followed by lon, ie the opposite of the kml file, setting swap_axes=true will makeit lon, lat 
 """
 function read_kml(kml_file::String;
@@ -26,6 +26,8 @@ function read_kml(kml_file::String;
         end
         outer = SArray{Tuple{2},Float64,1,2}[]
         inners = Vector{SVector{2, Float64}}[]
+        firstPass = true
+        is3D = false
         while true
             tag2 = r"<outerBoundaryIs>"
             m2 = match(tag2, s, m1.offset)
@@ -51,13 +53,23 @@ function read_kml(kml_file::String;
             loc = m1.offset
             finish = m1.offset - 1
             temp = split(s[start:finish])
-            is3D = length(split(temp[1],',')) > 2
+            if firstPass
+                is3D = length(split(temp[1],',')) > 2
+                if is3D # if all z values are 0 treat as being 2D polygon
+                    is3D = !(all(t->parse(Float64, split(t,',')[end]) == 0.0, temp))
+                end
+            end
             sampler = is3D ? samples : samples[1:2] 
+            if firstPass && is3D
+                outer = SArray{Tuple{3},Float64,1,3}[]
+                inners = Vector{SVector{3, Float64}}[]
+            end
             if isInner
                 push!(inners, map(ss->SVector(parse.(Float64,split(ss,',')[sampler])...), temp))
             else
                 outer = map(ss->SVector(parse.(Float64,split(ss,',')[sampler])...), temp)
             end
+            firstPass = false
         end
         if first_outer_ring_only
             if return_table
