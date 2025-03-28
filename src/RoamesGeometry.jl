@@ -5,6 +5,7 @@ module RoamesGeometry
 using StaticArrays
 using CoordinateTransformations
 using Rotations
+import LibGEOS
 
 import Base: getindex, setindex!, size, length, lastindex, in, isempty, eltype, IndexStyle,
              push!, pop!, show
@@ -27,7 +28,7 @@ export AbstractRegion, BoundingBox, TriangularPrism, Sphere, Triangle, Circle, C
 export boundingbox, pad, intersects, wireframe, distance, powerline_distances, volume,
        area, might_intersect, isclosed, issimple, closest_point, closest_points, convert2d,
        convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines, 
-       findClosestPointIndex
+       findClosestPointIndex, LibGEOSPolyToRoamesPoly, RoamesPolyToLibGEOSPoly
        
 export wkt, load_wkt, save_wkt, read_wkt, write_wkt, is_clockwise
 
