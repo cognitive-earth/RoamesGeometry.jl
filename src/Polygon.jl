@@ -196,10 +196,7 @@ Convert a Roames Polygon to a LibGEOS Polygon
 Note a 3D polygon will become 2D after conversion.
 """
 function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
-    exteriorRingCoords = ([  [p.p1[1],p.p1[2]] for p in RoamesPolygon.exterior  ])
-    if exteriorRingCoords[1] != exteriorRingCoords[end]
-        push!(exteriorRingCoords, exteriorRingCoords[1])
-    end
+    exteriorRingCoords = map(p->p[1:2], RoamesPolygon.exterior.points)
 
     # Create the exterior ring in LibGEOS format
     exteriorRing = LibGEOS.createLinearRing(exteriorRingCoords)
@@ -212,10 +209,7 @@ function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
     interiorRings = Vector{Ptr{LibGEOS.GEOSGeom}}(undef, numInteriorRings)
 
     for i in 1:numInteriorRings
-        interiorRingCoords = ([  [p.p1[1],p.p1[2]] for p in RoamesPolygon.interiors[i]  ])
-        if interiorRingCoords[1] != interiorRingCoords[end]
-            push!(interiorRingCoords, interiorRingCoords[1])
-        end
+        interiorRingCoords = map(p->[p[1:2]], RoamesPolygon.interiors[i].points)
         interiorRings[i] = LibGEOS.createLinearRing(interiorRingCoords)
 
         if interiorRings[i] == C_NULL
