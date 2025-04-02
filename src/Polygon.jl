@@ -188,3 +188,105 @@ end
 function issimple(multiPolygon::Vector{P} where P <: Polygon)
     return all(p->issimple(p), multiPolygon)
 end
+
+"""
+function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
+
+Convert a Roames Polygon to a LibGEOS Polygon
+Note a 3D polygon will become 2D after conversion.
+"""
+function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
+    exteriorRingCoords = map(p->p[1:2], RoamesPolygon.exterior.points)
+
+    # Create the exterior ring in LibGEOS format
+    exteriorRing = LibGEOS.createLinearRing(exteriorRingCoords)
+    if exteriorRing == C_NULL
+        error("Failed to create exterior ring")
+    end
+
+    # Handle interior rings (holes) if they exist
+    numInteriorRings = length(RoamesPolygon.interiors)
+    interiorRings = Vector{Ptr{LibGEOS.GEOSGeom}}(undef, numInteriorRings)
+
+    for i in 1:numInteriorRings
+        interiorRingCoords = map(p->[p[1:2]], RoamesPolygon.interiors[i].points)
+        interiorRings[i] = LibGEOS.createLinearRing(interiorRingCoords)
+
+        if interiorRings[i] == C_NULL
+            error("Failed to create Lib Geos interior ring $i from Roames Polygon $(RoamesPolygon) ")
+        end
+    end
+
+    # Create the LibGEOS polygon
+    LibGEOSPolygon = LibGEOS.createPolygon(exteriorRing,  interiorRings)
+
+    if LibGEOSPolygon == C_NULL
+        error("Failed to create polygon")
+    end
+
+    geom = LibGEOS.geomFromGEOS(LibGEOSPolygon)
+    if !LibGEOS.isValid(geom)
+        error(LibGEOS.isValidReason(geom))
+    end
+
+    return geom
+end
+
+"""
+function RoamesPolyToLibGEOSPoly(RoamesPolygon::Vector{Polygon})
+
+Convert a vector of Roames Polygons to a LibGEOS MultiPolygon
+Note a 3D polygon will become 2D after conversion.
+"""
+function RoamesPolyToLibGEOSPoly(RoamesPolygon::Vector{Polygon})
+    return LibGEOS.MultiPolygon(RoamesPolyToLibGEOSPoly.(RoamesPolygon))
+end
+
+"""
+function LibGEOSPolyToRoamesPoly(LibGEOSPolygon::LibGEOS.Polygon)
+
+Convert a libgeos Polygon to a Roames Polygon
+"""
+function LibGEOSPolyToRoamesPoly(LibGEOSPolygon::LibGEOS.Polygon)
+    # Get the exterior ring
+    exteriorRingGeos = LibGEOS.exteriorRing(LibGEOSPolygon)
+    if exteriorRingGeos == C_NULL
+        error("Polygon has no exterior ring")
+    end
+
+    # Get the coordinate sequence of the exterior ring
+    coordSeq = LibGEOS.getCoordSeq(exteriorRingGeos)
+    if coordSeq == C_NULL
+        error("Failed to get coordinate sequence for exterior ring")
+    end
+
+    exteriorCoords = LibGEOS.getCoordinates(coordSeq)
+    exteriorRingCoords = [ SVector(x, y) for (x, y) in exteriorCoords]
+    outer = LineString(exteriorRingCoords)
+
+    # inter ring goes here
+    numInteriorRings = LibGEOS.numInteriorRings(LibGEOSPolygon)
+    inners = LineString{2, Float64, Vector{RoamesGeometry.SVector{2, Float64}}}[]
+    for i in 1:numInteriorRings
+        interiorRingGeos = LibGEOS.interiorRing(LibGEOSPolygon,i)
+        coordSeq = LibGEOS.getCoordSeq(interiorRingGeos)
+        interiorCoords = LibGEOS.getCoordinates(coordSeq)
+        interiorRingCoords = [ SVector(x, y) for (x, y) in interiorCoords]
+        push!(inners,LineString(interiorRingCoords))
+    end
+
+    Rpolygon = Polygon(outer, inners)
+    if Rpolygon == nothing
+        error("Failed to convert to RoamesGeometry.Polygon")
+    end
+    return Rpolygon
+end
+
+"""
+function LibGEOSPolyToRoamesPoly(LibGEOSPolygon::LibGEOS.MultiPolygon)
+
+Convert a libgeos MultiPolygon to a RoamesGeometry Vector of Polygons
+"""
+function LibGEOSPolyToRoamesPoly(LibGEOSPolygon::LibGEOS.MultiPolygon)
+    return map(p->LibGEOSPolyToRoamesPoly(RoamesGeometry.LibGEOS.getgeom(LibGEOSPolygon, p)), 1:LibGEOS.ngeom(LibGEOSPolygon))
+end
