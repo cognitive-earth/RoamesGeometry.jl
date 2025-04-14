@@ -614,9 +614,9 @@ end
 function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     if uppercase(tokens[i]) == "POINT"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(SVector{2, Float64}, tokens, i + 1)
+            (geom, i) = parse_wkt(SVector{2, Float64}, tokens, i + 1, swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(SVector{3, Float64}, tokens, i + 2)
+            (geom, i) = parse_wkt(SVector{3, Float64}, tokens, i + 2, swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing POINT $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -624,9 +624,9 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "LINESTRING"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(LineString{2, Float64}, tokens, i + 1)
+            (geom, i) = parse_wkt(LineString{2, Float64}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(LineString{3, Float64}, tokens, i + 2)
+            (geom, i) = parse_wkt(LineString{3, Float64}, tokens, i + 2,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing LINESTRING $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -634,9 +634,9 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "POLYGON"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(Polygon{2, Float64}, tokens, i + 1)
+            (geom, i) = parse_wkt(Polygon{2, Float64}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(Polygon{3, Float64}, tokens, i + 2)
+            (geom, i) = parse_wkt(Polygon{3, Float64}, tokens, i + 2,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing POLYGON $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -644,9 +644,9 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "MULTIPOINT"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{SVector{2, Float64}}, tokens, i + 1)
+            (geom, i) = parse_wkt(Vector{SVector{2, Float64}}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{SVector{3, Float64}}, tokens, i + 2)
+            (geom, i) = parse_wkt(Vector{SVector{3, Float64}}, tokens, i + 2,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing MULTIPOINT $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -654,9 +654,9 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "MULTILINESTRING"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{LineString{2, Float64}}, tokens, i + 1)
+            (geom, i) = parse_wkt(Vector{LineString{2, Float64}}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{LineString{3, Float64}}, tokens, i + 2)
+            (geom, i) = parse_wkt(Vector{LineString{3, Float64}}, tokens, i + 2,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing MULTILINESTRING $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -664,9 +664,9 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "MULTIPOLYGON"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{Polygon{2, Float64}}, tokens, i + 1)
+            (geom, i) = parse_wkt(Vector{Polygon{2, Float64}}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i+1 && uppercase(tokens[i+1]) == "Z" && (tokens[i+2] == "(" || uppercase(tokens[i+2]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{Polygon{3, Float64}}, tokens, i + 2)
+            (geom, i) = parse_wkt(Vector{Polygon{3, Float64}}, tokens, i + 2,swap_1st_2nd_coords= swap_1st_2nd_coords)
         elseif length(tokens) > i && (uppercase(tokens[i+1]) == "M" || tokens[i+1] == "ZM")
             throw(WKTParsingError("Error parsing MULTIPOLYGON $(uppercase(tokens[i+1])) (Measures are not supported)")) 
         else
@@ -674,7 +674,7 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1s
         end
     elseif uppercase(tokens[i]) == "GEOMETRYCOLLECTION"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
-            (geom, i) = parse_wkt(Vector{Any}, tokens, i + 1)
+            (geom, i) = parse_wkt(Vector{Any}, tokens, i + 1,swap_1st_2nd_coords= swap_1st_2nd_coords)
         else
             throw(WKTParsingError("Error parsing GEOMETRYCOLLECTION")) 
         end
