@@ -561,9 +561,10 @@ end
     read_wkt(string::String)
 
 Parse a well-known text `String` and return a geometry.
+Setting  swap_1st_2nd_coords is useful when wanting co-ords to be ordered as lat followed by lon rather than the WKT standard of lon followed by lat 
 """
-function read_wkt(str::String; srid::RefValue{String} = Ref(""))
-    read_wkt(IOBuffer(str); srid=srid)
+function read_wkt(str::String; srid::RefValue{String} = Ref(""), swap_1st_2nd_coords::Bool = false)
+    read_wkt(IOBuffer(str); srid=srid, swap_1st_2nd_coords=swap_1st_2nd_coords)
 end
 
 """
@@ -571,7 +572,7 @@ end
 
 Parse a well-known text from IO stream `io` and return a geometry.
 """
-function read_wkt(io::IO; srid::RefValue{String} = Ref(""))
+function read_wkt(io::IO; srid::RefValue{String} = Ref(""), swap_1st_2nd_coords::Bool = false)
     tokens = tokenize_wkt(io)
 
     if isempty(tokens)
@@ -602,7 +603,7 @@ function read_wkt(io::IO; srid::RefValue{String} = Ref(""))
             throw(WKTParsingError("SRID field does not terminate"))
         end
     end
-    (geom, i) = parse_wkt(tokens, i)
+    (geom, i) = parse_wkt(tokens, i; swap_1st_2nd_coords= swap_1st_2nd_coords)
     
     if i != length(tokens) + 1
         throw(WKTParsingError("WKT does not terminate when expected"))
@@ -610,7 +611,7 @@ function read_wkt(io::IO; srid::RefValue{String} = Ref(""))
     return geom
 end
 
-function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     if uppercase(tokens[i]) == "POINT"
         if length(tokens) > i && (tokens[i+1] == "(" || uppercase(tokens[i+1]) == "EMPTY")
             (geom, i) = parse_wkt(SVector{2, Float64}, tokens, i + 1)
@@ -684,15 +685,15 @@ function parse_wkt(tokens::AbstractVector{<:AbstractString}, i::Integer)
     return (geom, i)
 end
 
-function parse_wkt(::Type{SVector{2,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{SVector{2,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     # Note that in many contexts, it is optional to surround point coordinates in brackets
     if tokens[i] == "("
         if length(tokens) < i+3 || tokens[i+3] != ")"
             throw(WKTParsingError("Error parsing POINT"))
         end
 
-        x = parse(Float64, tokens[i+1])
-        y = parse(Float64, tokens[i+2])
+        x = parse(Float64, tokens[i+1+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+2-swap_1st_2nd_coords])
         return (SVector(x, y), i+4)
     elseif tokens[i] == "EMPTY"
         # Not sure what this should be? `SVector(NaN, NaN)`? Or `missing`?
@@ -702,23 +703,23 @@ function parse_wkt(::Type{SVector{2,Float64}}, tokens::AbstractVector{<:Abstract
             throw(WKTParsingError("Error parsing POINT"))
         end
 
-        x = parse(Float64, tokens[i])
-        y = parse(Float64, tokens[i+1])
+        x = parse(Float64, tokens[i+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+!swap_1st_2nd_coords])
         return (SVector(x, y), i+2)
     end
 end
 
-function parse_wkt(::Type{SVector{3,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{SVector{3,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     # Note that in many contexts, it is optional to surround point coordinates in brackets
     if tokens[i] == "("
         if length(tokens) < i+4 || tokens[i+4] != ")"
             throw(WKTParsingError("Error parsing POINT Z"))
         end
 
-        x = parse(Float64, tokens[i+1])
-        y = parse(Float64, tokens[i+2])
+        x = parse(Float64, tokens[i+1+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+2-swap_1st_2nd_coords])
         z = parse(Float64, tokens[i+3])
-        return (SVector(x, y,z), i+5)
+        return (SVector(x, y, z), i+5)
     elseif tokens[i] == "EMPTY"
         # Not sure what this should be? `SVector(NaN, NaN, Nan)`? Or `missing`?
         throw(WKTParsingError("POINT Z EMPTY is not supported"))
@@ -727,14 +728,14 @@ function parse_wkt(::Type{SVector{3,Float64}}, tokens::AbstractVector{<:Abstract
             throw(WKTParsingError("Error parsing POINT Z"))
         end
 
-        x = parse(Float64, tokens[i])
-        y = parse(Float64, tokens[i+1])
+        x = parse(Float64, tokens[i+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+1-swap_1st_2nd_coords])
         z = parse(Float64, tokens[i+2])
         return (SVector(x, y), i+3)
     end
 end
 
-function parse_wkt(::Type{LineString{2,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{LineString{2,Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     if tokens[i] == "EMPTY"
         return (LineString(SVector{2,Float64}[]), i+1)
     end
@@ -744,8 +745,8 @@ function parse_wkt(::Type{LineString{2,Float64}}, tokens::AbstractVector{<:Abstr
     points = Vector{SVector{2, Float64}}()
     i += 1
     while length(tokens) >= i+2
-        x = parse(Float64, tokens[i])
-        y = parse(Float64, tokens[i+1])
+        x = parse(Float64, tokens[i+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+!swap_1st_2nd_coords])
         push!(points, SVector(x, y))
 
         if tokens[i+2] == ")"
@@ -764,7 +765,7 @@ function parse_wkt(::Type{LineString{2,Float64}}, tokens::AbstractVector{<:Abstr
     return (LineString(points), i+3)
 end
 
-function parse_wkt(::Type{LineString{3, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{LineString{3, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool = false)
     if tokens[i] == "EMPTY"
         return (LineString(SVector{3,Float64}[]), i+1)
     end
@@ -774,8 +775,8 @@ function parse_wkt(::Type{LineString{3, Float64}}, tokens::AbstractVector{<:Abst
     points = Vector{SVector{3, Float64}}()
     i += 1
     while length(tokens) > i+2
-        x = parse(Float64, tokens[i])
-        y = parse(Float64, tokens[i+1])
+        x = parse(Float64, tokens[i+swap_1st_2nd_coords])
+        y = parse(Float64, tokens[i+!swap_1st_2nd_coords])
         z = parse(Float64, tokens[i+2])
         push!(points, SVector(x, y, z))
 
@@ -795,7 +796,7 @@ function parse_wkt(::Type{LineString{3, Float64}}, tokens::AbstractVector{<:Abst
     return (LineString(points), i+4)
 end
 
-function parse_wkt(::Type{Polygon{2, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Polygon{2, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (Polygon(SVector{2,Float64}[]), i+1)
     end
@@ -807,7 +808,7 @@ function parse_wkt(::Type{Polygon{2, Float64}}, tokens::AbstractVector{<:Abstrac
     n_linestrings = 0
     i += 1
     while i <= length(tokens)
-        (ls, i) = parse_wkt(LineString{2,Float64}, tokens, i)
+        (ls, i) = parse_wkt(LineString{2,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         if n_linestrings == 0
             exterior = ls
             n_linestrings += 1
@@ -830,7 +831,7 @@ function parse_wkt(::Type{Polygon{2, Float64}}, tokens::AbstractVector{<:Abstrac
     throw(WKTParsingError("Error parsing POLYGON"))
 end
 
-function parse_wkt(::Type{Polygon{3, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Polygon{3, Float64}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (Polygon(SVector{3,Float64}[]), i+1)
     end
@@ -842,7 +843,7 @@ function parse_wkt(::Type{Polygon{3, Float64}}, tokens::AbstractVector{<:Abstrac
     n_linestrings = 0
     i += 1
     while i <= length(tokens)
-        (ls, i) = parse_wkt(LineString{3,Float64}, tokens, i)
+        (ls, i) = parse_wkt(LineString{3,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         if n_linestrings == 0
             exterior = ls
             n_linestrings += 1
@@ -865,7 +866,7 @@ function parse_wkt(::Type{Polygon{3, Float64}}, tokens::AbstractVector{<:Abstrac
     throw(WKTParsingError("Error parsing POLYGON Z"))
 end
 
-function parse_wkt(::Type{Vector{SVector{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{SVector{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (SVector{2,Float64}[], i+1)
     end
@@ -875,7 +876,7 @@ function parse_wkt(::Type{Vector{SVector{2, Float64}}}, tokens::AbstractVector{<
     points = Vector{SVector{2, Float64}}()
     i += 1
     while i <= length(tokens)
-        (point, i) = parse_wkt(SVector{2,Float64}, tokens, i)
+        (point, i) = parse_wkt(SVector{2,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(points, point)
 
         if length(tokens) < i
@@ -892,7 +893,7 @@ function parse_wkt(::Type{Vector{SVector{2, Float64}}}, tokens::AbstractVector{<
     throw(WKTParsingError("Error parsing MULTIPOINT"))
 end
 
-function parse_wkt(::Type{Vector{SVector{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{SVector{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (SVector{3,Float64}[], i+1)
     end
@@ -902,7 +903,7 @@ function parse_wkt(::Type{Vector{SVector{3, Float64}}}, tokens::AbstractVector{<
     points = Vector{SVector{3, Float64}}()
     i += 1
     while i <= length(tokens)
-        (point, i) = parse_wkt(SVector{3,Float64}, tokens, i)
+        (point, i) = parse_wkt(SVector{3,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(points, point)
 
         if length(tokens) < i
@@ -919,7 +920,7 @@ function parse_wkt(::Type{Vector{SVector{3, Float64}}}, tokens::AbstractVector{<
     throw(WKTParsingError("Error parsing MULTIPOINT Z"))
 end
 
-function parse_wkt(::Type{Vector{LineString{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{LineString{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (LineString{2,Float64,Vector{SVector{2,Float64}}}[], i+1)
     end
@@ -929,7 +930,7 @@ function parse_wkt(::Type{Vector{LineString{2, Float64}}}, tokens::AbstractVecto
     linestrings = Vector{LineString{2, Float64, Vector{SVector{2, Float64}}}}()
     i += 1
     while i <= length(tokens)
-        (ls, i) = parse_wkt(LineString{2,Float64}, tokens, i)
+        (ls, i) = parse_wkt(LineString{2,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(linestrings, ls)
 
         if length(tokens) < i
@@ -946,7 +947,7 @@ function parse_wkt(::Type{Vector{LineString{2, Float64}}}, tokens::AbstractVecto
     throw(WKTParsingError("Error parsing MULTILINESTRING"))
 end
 
-function parse_wkt(::Type{Vector{LineString{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{LineString{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (LineString{3,Float64,Vector{SVector{3,Float64}}}[], i+1)
     end
@@ -956,7 +957,7 @@ function parse_wkt(::Type{Vector{LineString{3, Float64}}}, tokens::AbstractVecto
     linestrings = Vector{LineString{3, Float64, Vector{SVector{3, Float64}}}}()
     i += 1
     while i <= length(tokens)
-        (ls, i) = parse_wkt(LineString{3,Float64}, tokens, i)
+        (ls, i) = parse_wkt(LineString{3,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(linestrings, ls)
 
         if length(tokens) < i
@@ -973,7 +974,7 @@ function parse_wkt(::Type{Vector{LineString{3, Float64}}}, tokens::AbstractVecto
     throw(WKTParsingError("Error parsing MULTILINESTRING Z"))
 end
 
-function parse_wkt(::Type{Vector{Polygon{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{Polygon{2, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (Polygon{2,Float64,LineString{2,Float64,Vector{SVector{2,Float64}}},Vector{LineString{2,Float64,Vector{SVector{2,Float64}}}}}[], i+1)
     end
@@ -983,7 +984,7 @@ function parse_wkt(::Type{Vector{Polygon{2, Float64}}}, tokens::AbstractVector{<
     polygons = Vector{Polygon{2,Float64,LineString{2,Float64,Vector{SVector{2,Float64}}},Vector{LineString{2,Float64,Vector{SVector{2,Float64}}}}}}()
     i += 1
     while i <= length(tokens)
-        (polygon, i) = parse_wkt(Polygon{2,Float64}, tokens, i)
+        (polygon, i) = parse_wkt(Polygon{2,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(polygons, polygon)
 
         if length(tokens) < i
@@ -1000,7 +1001,7 @@ function parse_wkt(::Type{Vector{Polygon{2, Float64}}}, tokens::AbstractVector{<
     throw(WKTParsingError("Error parsing MULTIPOLYGON"))
 end
 
-function parse_wkt(::Type{Vector{Polygon{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{Polygon{3, Float64}}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (Polygon{3,Float64,LineString{3,Float64,Vector{SVector{3,Float64}}},Vector{LineString{3,Float64,Vector{SVector{3,Float64}}}}}[], i+1)
     end
@@ -1010,7 +1011,7 @@ function parse_wkt(::Type{Vector{Polygon{3, Float64}}}, tokens::AbstractVector{<
     polygons = Vector{Polygon{3,Float64,LineString{3,Float64,Vector{SVector{3,Float64}}},Vector{LineString{3,Float64,Vector{SVector{3,Float64}}}}}}()
     i += 1
     while i <= length(tokens)
-        (polygon, i) = parse_wkt(Polygon{3,Float64}, tokens, i)
+        (polygon, i) = parse_wkt(Polygon{3,Float64}, tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(polygons, polygon)
 
         if length(tokens) < i
@@ -1027,7 +1028,7 @@ function parse_wkt(::Type{Vector{Polygon{3, Float64}}}, tokens::AbstractVector{<
     throw(WKTParsingError("Error parsing MULTIPOLYGON Z"))
 end
 
-function parse_wkt(::Type{Vector{Any}}, tokens::AbstractVector{<:AbstractString}, i::Integer)
+function parse_wkt(::Type{Vector{Any}}, tokens::AbstractVector{<:AbstractString}, i::Integer; swap_1st_2nd_coords::Bool=false)
     if tokens[i] == "EMPTY"
         return (Any[], i+1)
     end
@@ -1037,7 +1038,7 @@ function parse_wkt(::Type{Vector{Any}}, tokens::AbstractVector{<:AbstractString}
     geometries = Vector{Any}()
     i += 1
     while i <= length(tokens)
-        (geometry, i) = parse_wkt(tokens, i)
+        (geometry, i) = parse_wkt(tokens, i; swap_1st_2nd_coords=swap_1st_2nd_coords)
         push!(geometries, geometry)
 
         if length(tokens) < i
