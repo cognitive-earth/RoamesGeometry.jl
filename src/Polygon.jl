@@ -209,7 +209,7 @@ function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
     interiorRings = Vector{Ptr{LibGEOS.GEOSGeom}}(undef, numInteriorRings)
 
     for i in 1:numInteriorRings
-        interiorRingCoords = map(p->[p[1:2]], RoamesPolygon.interiors[i].points)
+        interiorRingCoords = map(p->p[1:2], RoamesPolygon.interiors[i].points)
         interiorRings[i] = LibGEOS.createLinearRing(interiorRingCoords)
 
         if interiorRings[i] == C_NULL
