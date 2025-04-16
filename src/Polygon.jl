@@ -80,6 +80,10 @@ function area(p::Polygon{2, T}) where {T}
     return area(p.exterior) + mapreduce(area, +, p.interiors; init = zero(T))
 end
 
+function area(multiPolygon::Vector{P} where P<:Polygon)
+    return sum(p->area(p), multiPolygon)
+end 
+
 function in(p::StaticVector{2, <:Real}, multiPolygon::Vector{P} where P<:Polygon)
     return any(poly->p in poly, multiPolygon)
 end
