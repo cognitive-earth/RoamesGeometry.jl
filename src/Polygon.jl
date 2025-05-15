@@ -237,7 +237,7 @@ function RoamesPolyToLibGEOSPoly(RoamesPolygon::Polygon)
 end
 
 """
-function RoamesPolyToLibGEOSPoly(RoamesPolygon::Vector{Polygon})
+function RoamesPolyToLibGEOSPoly(RoamesPolygon::Vector{P} where P <: Polygon)
 
 Convert a vector of Roames Polygons to a LibGEOS MultiPolygon
 Note a 3D polygon will become 2D after conversion.
