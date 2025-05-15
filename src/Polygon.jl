@@ -243,6 +243,9 @@ Convert a vector of Roames Polygons to a LibGEOS MultiPolygon
 Note a 3D polygon will become 2D after conversion.
 """
 function RoamesPolyToLibGEOSPoly(RoamesPolygon::Vector{P} where P <: Polygon)
+    if isempty(RoamesPolygon)
+        return LibGEOS.readgeom("MULTIPOLYGON(EMPTY)")
+    end
     return LibGEOS.MultiPolygon(RoamesPolyToLibGEOSPoly.(RoamesPolygon))
 end
 
