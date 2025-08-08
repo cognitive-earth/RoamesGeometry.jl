@@ -1,6 +1,6 @@
 function is_Displaz_installed()
     try
-        @static if VERSION < v"0.7.0"
+        if VERSION < v"0.7.0"
             return Pkg.installed("Displaz") != nothing
         else
             return haskey(Pkg.installed(), "Displaz")
@@ -10,7 +10,7 @@ function is_Displaz_installed()
     end
 end
 
-@static if is_Displaz_installed()
+if is_Displaz_installed()
     using Displaz
 
     # Plot Lines
