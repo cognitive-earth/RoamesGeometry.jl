@@ -304,3 +304,38 @@ distance(p::AbstractVector{<:Real}, polygon::Polygon) = distance(polygon, p)
 # Distance between a point and the closest point on a Catenary
 distance(p::AbstractVector{<:Real}, cat::Catenary) = powerline_distances(cat, p)[1]
 distance(cat::Catenary, p::AbstractVector{<:Real}) = powerline_distances(cat, p)[1]
+
+"""
+Minimum distance between two catenaries
+also returns closest point on cat1 and vector from here to closest point on cat2
+"""
+function distance(cat1::Catenary, cat2::Catenary)
+    # Uses Nelder Mead to find closest points on two catenaries, bounds on
+    # catenaries enabled by taking sin of input variables and scaling so that -1
+    # is start of catenary and 1 the end
+    c1 = 0.5*(cat1.lmax - cat1.lmin)
+    c2 = c1 + cat1.lmin
+    k1 = 0.5*(cat2.lmax - cat2.lmin)
+    k2 = k1 + cat2.lmin
+
+    f(x) = sqrt(sum(abs2,cat1[c1 * sin(x[1]) + c2] - cat2[k1 * sin(x[2]) + k2]))
+
+    # Two infinite catenaries can have I believe max 2 minima in their distance between points equations (TODO to be proven)
+    # however the 4 boundaries can introduce more false minima as some descent gullies only join outside the bounds space.
+    # Starting 4 times, ie at the four corners of the boundaries avoids all these possible false minima (I've demonstrated This
+    # by comparing 5 million randomly generated pairs of catenaries using this method and using LineStrings)
+    # Even with using 4 restarts this method is 3 times faster than using line strings (assumming an accuracy of 0.1m over catenaries up to 100m long)
+    # This code could likely be made much more efficient if needed eg. using tolerances
+    starts = [[-1.0, 1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, -1.0]]
+    local result
+    for i = 1:length(starts)
+        result2 = optimize(f,starts[i],NelderMead()) # TODO use accuracy tolerance to make it faster (awkward with the sinusoid)
+        if i == 1 || result2.minimum < result.minimum
+            result = result2
+        end
+    end
+    cat1Closest = cat1[c1 * sin(result.minimizer[1]) + c2]
+    vectorCat1ToCat2Closest = cat2[ k1 * sin(result.minimizer[2]) + k2] - cat1Closest
+    return result.minimum, cat1Closest, vectorCat1ToCat2Closest
+end
+

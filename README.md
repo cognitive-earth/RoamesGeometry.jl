@@ -145,8 +145,7 @@ of sync.
 ### Distances
 
 The distance between various geometries can be found. The `distance` function
-returns the (smallest) Euclidean distance between two geometric objects, and
-is currently defined between points and catenaries only. The `closest_point`
+returns the (smallest) Euclidean distance between two geometric objects. The `closest_point`
 and `closest_points` functions return the closest point(s) between geometries.
 
 #### Distance to catenaries
