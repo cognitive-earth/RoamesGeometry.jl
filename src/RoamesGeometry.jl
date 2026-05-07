@@ -80,6 +80,7 @@ if VERSION >= v"0.7.0"
     using Colors
     using FixedPointNumbers
     using Dates
+    using Optim
 
     export GridIndex
     export load_pointcloud, save_pointcloud
