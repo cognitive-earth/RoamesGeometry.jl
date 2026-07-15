@@ -29,4 +29,5 @@ if VERSION >= v"0.7.0"
 
 	include("GridIndex.jl")
 	include("pointcloud_io.jl")
+	include("kml.jl")
 end
