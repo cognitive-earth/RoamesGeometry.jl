@@ -88,6 +88,14 @@ function in(p::StaticVector{2, <:Real}, multiPolygon::Vector{P} where P<:Polygon
     return any(poly->p in poly, multiPolygon)
 end
 
+function intersects(ls::LineString{2}, multiPolygon::Vector{P} where P<:Polygon)
+    return any(poly->intersects(ls, poly), multiPolygon)
+end
+
+function intersects(l::Line{2}, multiPolygon::Vector{P} where P<:Polygon)
+    return any(poly->intersects(l, poly), multiPolygon)
+end
+
 function in(p::StaticVector{2, <:Real}, polygon::Polygon{2})
     # Winding number algorith, for example read
     # http://geomalgorithms.com/a03-_inclusion.html

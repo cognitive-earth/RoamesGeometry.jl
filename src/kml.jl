@@ -83,6 +83,56 @@ function read_kml(kml_file::String;
     return poly
 end
 
+"""
+    read_kml_linestring(kml_file::String; swap_axes::Bool = false)
+
+Read every KML `<LineString>` in `kml_file` and return them as a vector of
+RoamesGeometry [`LineString`](@ref) objects.
+
+KML stores coordinates as longitude, latitude, altitude. By default this
+function returns latitude followed by longitude, matching [`read_kml`](@ref).
+Set `swap_axes=true` to retain the KML longitude, latitude ordering. Altitude is
+included for 3D coordinates, except when every altitude in a line string is
+zero, in which case that line string is returned as 2D (also matching
+`read_kml`).
+"""
+function read_kml_linestring(kml_file::String; swap_axes::Bool = false)::Vector{LineString}
+    contents = read(kml_file, String)
+    linestrings = LineString[]
+    axis_order = swap_axes ? (1, 2) : (2, 1)
+
+    linestring_pattern = r"(?s)<LineString(?:\s[^>]*)?>.*?</LineString>"
+    coordinates_pattern = r"(?s)<coordinates(?:\s[^>]*)?>(.*?)</coordinates>"
+
+    for linestring_match in eachmatch(linestring_pattern, contents)
+        coordinates_match = match(coordinates_pattern, linestring_match.match)
+        isnothing(coordinates_match) && continue
+
+        coordinate_text = split(strip(coordinates_match.captures[1]))
+        isempty(coordinate_text) && continue
+        coordinate_values = [parse.(Float64, split(coordinate, ',')) for coordinate in coordinate_text]
+
+        is3d = length(first(coordinate_values)) > 2
+        if is3d
+            is3d = !all(values -> values[3] == 0.0, coordinate_values)
+        end
+
+        if is3d
+            points = map(coordinate_values) do values
+                SVector(values[axis_order[1]], values[axis_order[2]], values[3])
+            end
+            push!(linestrings, LineString(points))
+        else
+            points = map(coordinate_values) do values
+                SVector(values[axis_order[1]], values[axis_order[2]])
+            end
+            push!(linestrings, LineString(points))
+        end
+    end
+
+    return linestrings
+end
+
 function write_kml(
     polygon::Union{Table,Polygon},
     poly_file::String;

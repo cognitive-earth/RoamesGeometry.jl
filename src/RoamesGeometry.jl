@@ -32,7 +32,7 @@ export boundingbox, pad, intersects, wireframe, distance, powerline_distances, v
        
 export wkt, load_wkt, save_wkt, read_wkt, write_wkt, is_clockwise
 
-export read_kml, write_kml
+export read_kml, read_kml_linestring, write_kml
 
 # Any affine transformation type
 const AffineTransformation = Union{IdentityTransformation, Translation, LinearMap, AffineMap}
