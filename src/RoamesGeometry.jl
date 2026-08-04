@@ -28,7 +28,7 @@ export AbstractRegion, BoundingBox, TriangularPrism, Sphere, Triangle, Circle, C
 export boundingbox, pad, intersects, wireframe, distance, powerline_distances, volume,
        area, might_intersect, isclosed, issimple, closest_point, closest_points, convert2d,
        convert3d, winding_number, containsMoreThanN, database_params, findIndiciesClose2Lines, 
-       findClosestPointIndex, LibGEOSPolyToRoamesPoly, RoamesPolyToLibGEOSPoly
+       findClosestPointIndex, LibGEOSPolyToRoamesPoly, RoamesPolyToLibGEOSPoly, rotate_catenary
        
 export wkt, load_wkt, save_wkt, read_wkt, write_wkt, is_clockwise
 

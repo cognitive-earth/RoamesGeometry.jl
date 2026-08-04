@@ -186,3 +186,16 @@ function fit_catenary_origin_2d(x1::T, z1::T, x2::T, z2::T) where {T}
 
     return (a, x0, z0)
 end
+
+function rotate_catenary(c::Catenary, θ::Float64)
+    # operates on the catenary's transform attribute to effectively rotate around the
+    # axis formed by the atachment points. First translate so axis passes origin then
+    # rotate around shifted axis (running form lmin to lmax) and translate back again
+    if c.lmin == c.lmax
+        @error "Cannot rotate a catenary with zero length (lmin == lmax)"
+    end
+    attach1 = c[c.lmin]
+    vect = c[c.lmax] - attach1
+    rot_function = Translation(attach1) ∘ LinearMap(AngleAxis(θ, vect...)) ∘ Translation(-attach1)
+    return rot_function(c)
+end
