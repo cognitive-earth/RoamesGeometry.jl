@@ -23,7 +23,7 @@ else
 end
 
 export AbstractRegion, BoundingBox, TriangularPrism, Sphere, Triangle, Circle, Cylinder,
-       Line, LineString, Quadratic, Catenary, Polygon
+       Line, LineString, Quadratic, Catenary, Polygon, convex_hull
 
 export boundingbox, pad, intersects, wireframe, distance, powerline_distances, volume,
        area, might_intersect, isclosed, issimple, closest_point, closest_points, convert2d,

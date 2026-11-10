@@ -12,6 +12,15 @@
     @test convert3d(p, 1) == Polygon(map(x->SVector{3,Float32}(x[1], x[2], 1.0), [a,b,c,d,a]))
     @test convert3d(Polygon(map(x->SVector{3,Float32}(x[1], x[2], 1.0), [a,b,c,d,a])), 2) == Polygon{3}([Float32[0.0, 0.0, 2.0], Float32[0.0, 1.0, 2.0], Float32[1.0, 1.0, 2.0], Float32[1.0, 0.0, 2.0], Float32[0.0, 0.0, 2.0]])
 
+    @testset "Convex hull from 3D point lists" begin
+        pts = SVector{3,Float64}[SVector(0.0,0.0,10.0), SVector(1.0,0.0,10.0), SVector(0.0,1.0,10.0), SVector(1.0,1.0,10.0), SVector(0.5,0.5,10.0)]
+        hull = convex_hull(pts)
+        @test hull isa Polygon{2}
+        @test area(hull) ≈ 1.0
+        @test Set(map(Tuple, hull.exterior.points[1:end-1])) == Set([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)])
+        @test Polygon(pts; convex = true) == hull
+    end
+
     @testset "Point containment and distance" begin
         ls_outer = LineString([SVector(0.0,0.0), SVector(0.0,1.0), SVector(1.0,1.0), SVector(1.0,0.0), SVector(0.0,0.0)])
         ls_inner = LineString([SVector(0.4,0.4), SVector(0.6,0.4), SVector(0.6,0.6), SVector(0.4,0.6), SVector(0.4,0.4)])

@@ -17,10 +17,88 @@ end
 
 Polygon(points::StaticVector{N,T}...) where {N, T<:Real} = Polygon(collect(points))
 Polygon(points::AbstractVector{<:StaticVector{N,T}}) where {N,T<:Real} = Polygon{N}(LineString{N}(points))
+Polygon(points::AbstractVector{<:StaticVector{3,T}}; convex::Bool = false) where {T<:Real} = convex ? convex_hull(points) : Polygon{3}(LineString{3}(points))
 Polygon{N}(points::AbstractVector{T}...) where {N, T<:Real} = Polygon{N}(collect(points))
 Polygon{N}(points::AbstractVector{<:AbstractVector{T}}) where {N, T<:Real} = Polygon{N,T}(LineString{N,T}(points))
 Polygon{N,T}(points::AbstractVector{<:Real}...) where {N, T<:Real} = Polygon{N,T}(collect(points))
 Polygon{N,T}(points::AbstractVector{<:AbstractVector{<:Real}}) where {N, T<:Real} = Polygon{N,T}(LineString{N,T}(points))
+
+function _cross2(a::StaticVector{2, T}, b::StaticVector{2, T}, c::StaticVector{2, T}) where {T<:Real}
+    return (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1])
+end
+
+function _graham_scan_2d(points::AbstractVector{<:StaticVector{2, T}}) where {T <: Real}
+    if isempty(points)
+        return SVector{2, T}[]
+    end
+
+    unique_points = unique(points)
+    if length(unique_points) <= 2
+        hull = collect(unique_points)
+        push!(hull, hull[1])
+        return hull
+    end
+
+    pivot = unique_points[1]
+    for p in unique_points[2:end]
+        if (p[2], p[1]) < (pivot[2], pivot[1])
+            pivot = p
+        end
+    end
+
+    ordered = [p for p in unique_points if p != pivot]
+    sort!(ordered; by = p -> (atan(p[2] - pivot[2], p[1] - pivot[1]), norm(p - pivot)))
+
+    stack = Vector{SVector{2, T}}(undef, length(unique_points))
+    stack_len = 1
+    stack[1] = pivot
+
+    for p in ordered
+        while stack_len >= 2 && _cross2(stack[stack_len - 1], stack[stack_len], p) <= zero(T)
+            stack_len -= 1
+        end
+        stack_len += 1
+        stack[stack_len] = p
+    end
+
+    if stack_len >= 2 && stack[1] == stack[stack_len]
+        stack_len -= 1
+    end
+
+    return stack[1:stack_len]
+end
+
+function convex_hull(points::AbstractVector{<:StaticVector{3, T}}) where {T<:Real}
+    if isempty(points)
+        return Polygon{2, T}(LineString{2, T}(SVector{2, T}[]))
+    end
+
+    projected = [convert2d(p) for p in points]
+    hull = _graham_scan_2d(projected)
+    if isempty(hull)
+        return Polygon{2, T}(LineString{2, T}(SVector{2, T}[]))
+    end
+
+    if hull[1] != hull[end]
+        push!(hull, hull[1])
+    end
+    if area(LineString{2, T}(hull)) < zero(T)
+        reverse!(hull)
+        if hull[1] != hull[end]
+            push!(hull, hull[1])
+        end
+    end
+    if !isempty(hull) && length(hull) >= 3
+        area_signed = area(LineString{2, T}(hull))
+        if area_signed < zero(T)
+            reverse!(hull)
+            if hull[1] != hull[end]
+                push!(hull, hull[1])
+            end
+        end
+    end
+    return Polygon{2, T}(LineString{2, T}(hull))
+end
 
 Polygon(ls::LineString) = Polygon(ls, Vector{typeof(ls)}())
 Polygon{N}(ls::LineString{N}) where {N} = Polygon{N}(ls, Vector{typeof(ls)}())
